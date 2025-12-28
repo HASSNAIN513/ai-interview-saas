@@ -75,42 +75,9 @@ export function AudioRecorder({ onTranscriptChange }) {
                 // Setup listener
                 await NativeSpeech.addListener("partialResults", (data) => {
                     if (data.matches && data.matches.length > 0) {
-                        // Show what is currently being spoken providing immediate feedback
-                        // Note: This replaces the "verified" state temporarily in the UI roughly 
-                        // if we were managing two states, but here we just append.
-                        // Actually, simpler logic for Mobile Hybrid: 
-                        // Just trust the stream. If we just append partials, we get "Hello... Hello World... Hello World How..."
-                        // We need a way to say "Current Segment".
-
-                        // FIX: For now, let's purely rely on partials for the "Current active sentence" 
-                        // and `result` for the "Committed sentence"
-                        // But since we only have one `nativeTranscript` state...
-
-                        // Let's try this: 
-                        // When partial comes, we DON'T add it to `nativeTranscript` permanent store yet?
-                        // No, the standard behavior for this plugin is that `partialResults` fires repeatedly.
-                        // `result` fires once at the end of a phrase.
-
-                        // Improved Logic:
-                        // We will rely on `result` for the permanent text.
-                        // But we will use a ref or temp state for the partial? 
-                        // To keep it simple for this fix: 
-                        // We will update the transcript with the partial match, but we know it might be "unstable".
-                        // BUT, the critical bug is "Nothing is processing". 
-                        // So let's enable this to at least show SOMETHING.
-
-                        const partialText = data.matches[0];
-                        // We can't easily dedup without complex logic. 
-                        // Let's just log it for debug and rely on `result` for the text, 
-                        // BUT `result` might be slow.
-
-                        // Alternate: On Android, `partialResults`: true often yields the WHOLE phrase growing.
-                        // So we can just set transcript to matches[0] if it's longer than before?
-                        // Let's just enable the listener to append to a temp log? 
-                        // No, user said "It's not recording". 
-
-                        // Let's try to just use `partialResults` to update the text IF it is not empty.
-                        // But we need to handle the `result` event too.
+                        // CRITICAL FIX: Immediately update UI with what is being spoken.
+                        // On Android, matches[0] in partialResults is usually the full cumulative sentence.
+                        setNativeTranscript(data.matches[0]);
                     }
                 });
 
@@ -119,8 +86,8 @@ export function AudioRecorder({ onTranscriptChange }) {
                         setNativeTranscript(prev => {
                             const newText = data.matches[0];
                             // Prevent duplicates if possible (simple trimmed check)
-                            if (prev.endsWith(newText)) return prev;
-                            return prev ? prev + " " + newText : newText;
+                            // If the partial already covered it, we might just be setting it again, which is fine.
+                            return newText;
                         });
                     }
                 });
