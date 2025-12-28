@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connection Lost</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f9fafb;
+            color: #111827;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 24px;
+            color: #ef4444;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        p {
+            color: #6b7280;
+            margin-bottom: 32px;
+            line-height: 1.5;
+        }
+        button {
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        button:active {
+            background-color: #1d4ed8;
+            transform: translateY(1px);
+        }
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #111827;
+                color: #f9fafb;
+            }
+            p {
+                color: #9ca3af;
+            }
+        }
+    </style>
+</head>
+<body>
+    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+    </svg>
+    <h1>Connection Lost</h1>
+    <p>We couldn't connect to the server.<br>Please check your internet connection.</p>
+    <button id="retry-btn" onclick="retryConnection()">Try Again</button>
+
+    <script>
+        function retryConnection() {
+            const btn = document.getElementById('retry-btn');
+            btn.textContent = "Connecting...";
+            btn.style.opacity = "0.7";
+            
+            // Try to reload the main URL
+            // Using the hardcoded URL from config is safest, or just reload current if it was effectively a 404
+            window.location.href = "https://ai-interview-saas-eight.vercel.app";
+        }
+    </script>
+</body>
+</html>

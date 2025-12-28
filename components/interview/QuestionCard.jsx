@@ -49,7 +49,12 @@ export function QuestionCard({ question, speakingStyle, voiceName, onPlayAudio }
         try {
             if (Capacitor.isNativePlatform()) {
                 // Native TTS Logic
-                await TextToSpeech.stop();
+                try {
+                    await TextToSpeech.stop();
+                } catch (e) {
+                    // Ignore stop errors
+                }
+
                 await TextToSpeech.speak({
                     text: cleanQuestion,
                     lang: 'en-US',
@@ -58,8 +63,7 @@ export function QuestionCard({ question, speakingStyle, voiceName, onPlayAudio }
                     volume: 1.0,
                     category: 'ambient',
                 });
-                setIsPlaying(false); // Native wait implies it finishes? Plugin promise resolves when speaking starts or finishes? Check docs.
-                // Actually the standard plugin resolves when it finishes speaking usually
+                setIsPlaying(false);
             } else {
                 // Web Fallback
                 if (typeof window === 'undefined' || !window.speechSynthesis) return;

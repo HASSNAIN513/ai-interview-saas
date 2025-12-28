@@ -75,19 +75,18 @@ export function AudioRecorder({ onTranscriptChange }) {
                 // Setup listener
                 await NativeSpeech.addListener("partialResults", (data) => {
                     if (data.matches && data.matches.length > 0) {
-                        setNativeTranscript(prev => prev + " " + data.matches[0]); // Simple append logic, usually you want better handling
+                        // For partials, we might not want to append, but just show current phrase
+                        // But to match web behavior, let's just append the latest match that is "final-ish"
+                        // Mobile often gives a stream of text.
+                        // Simple approach: Use final result mostly.
                     }
                 });
 
-                await NativeSpeech.addListener("result", (data) => { // Android final result
+                await NativeSpeech.addListener("result", (data) => {
                     if (data.matches && data.matches.length > 0) {
                         setNativeTranscript(prev => {
-                            // Avoid duplicating if partial handled it, but usually result is the final phrase
-                            // For simplicity in this hybrid, we might reset and append or just use what we have.
-                            // Better logic: replace last partial? 
-                            // Let's just append for now or handled by partials.
-                            // Actually, Capacitor plugin behavior varies. Let's try to just capture partials.
-                            return prev;
+                            const newText = data.matches[0];
+                            return prev ? prev + " " + newText : newText;
                         });
                     }
                 });
@@ -112,10 +111,13 @@ export function AudioRecorder({ onTranscriptChange }) {
     const stopRecording = async () => {
         if (isNative) {
             try {
-                await NativeSpeech.stop();
+                // Ensure we mark as stopped first to update UI
                 setNativeListening(false);
+                await NativeSpeech.stop();
             } catch (e) {
                 console.error("Stop Error:", e);
+                // Force state reset if error
+                setNativeListening(false);
             }
         } else {
             SpeechRecognition.stopListening();

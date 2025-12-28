@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect } from "firebase/auth";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/Button";
@@ -21,6 +21,24 @@ export default function LoginPage() {
     const { user, loading: authLoading } = useAuth();
 
     useEffect(() => {
+        // Handle Redirect Result (For Mobile App)
+        const checkRedirect = async () => {
+            try {
+                const result = await getRedirectResult(auth);
+                if (result) {
+                    console.log("Redirect Login Success:", result.user);
+                    router.push("/dashboard");
+                }
+            } catch (error) {
+                console.error("Redirect Login Error:", error);
+                setError(error.message);
+            }
+        };
+
+        if (Capacitor.isNativePlatform()) {
+            checkRedirect();
+        }
+
         if (!authLoading && user) {
             router.push("/dashboard");
         }
