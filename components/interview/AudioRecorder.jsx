@@ -5,19 +5,10 @@ import { Button } from "@/components/ui/Button";
 import { Mic, Square, RefreshCw } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { SpeechRecognition as NativeSpeech } from "@capacitor-community/speech-recognition";
-import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 
 export function AudioRecorder({ onTranscriptChange }) {
     // Platform check
     const isNative = Capacitor.isNativePlatform();
-
-    // Web Implementation
-    const {
-        transcript: webTranscript,
-        listening: webListening,
-        resetTranscript: webResetTranscript,
-        browserSupportsSpeechRecognition
-    } = useSpeechRecognition();
 
     // Native State
     const [nativeTranscript, setNativeTranscript] = useState("");
@@ -25,8 +16,9 @@ export function AudioRecorder({ onTranscriptChange }) {
     const [permissionGranted, setPermissionGranted] = useState(false);
 
     // Unified State
-    const transcript = isNative ? nativeTranscript : webTranscript;
-    const listening = isNative ? nativeListening : webListening;
+    // When not native, we can't record voice in this version as the browser lib was removed.
+    const transcript = nativeTranscript;
+    const listening = nativeListening;
 
     // Initialize Native Permissions
     useEffect(() => {
@@ -51,8 +43,8 @@ export function AudioRecorder({ onTranscriptChange }) {
         onTranscriptChange(transcript);
     }, [transcript, onTranscriptChange]);
 
-    if (!isNative && !browserSupportsSpeechRecognition) {
-        return <span>Browser doesn't support speech recognition.</span>;
+    if (!isNative) {
+        return <div className="p-4 bg-yellow-50 text-yellow-700 rounded-lg text-sm">Voice recording is optimized for the Mobile App. Please use the app for full voice features.</div>;
     }
 
     const startRecording = async () => {
@@ -76,19 +68,13 @@ export function AudioRecorder({ onTranscriptChange }) {
                 await NativeSpeech.addListener("partialResults", (data) => {
                     if (data.matches && data.matches.length > 0) {
                         // CRITICAL FIX: Immediately update UI with what is being spoken.
-                        // On Android, matches[0] in partialResults is usually the full cumulative sentence.
                         setNativeTranscript(data.matches[0]);
                     }
                 });
 
                 await NativeSpeech.addListener("result", (data) => {
                     if (data.matches && data.matches.length > 0) {
-                        setNativeTranscript(prev => {
-                            const newText = data.matches[0];
-                            // Prevent duplicates if possible (simple trimmed check)
-                            // If the partial already covered it, we might just be setting it again, which is fine.
-                            return newText;
-                        });
+                        setNativeTranscript(data.matches[0]);
                     }
                 });
 
@@ -104,24 +90,18 @@ export function AudioRecorder({ onTranscriptChange }) {
                 console.error("Native Speech Error:", e);
                 setNativeListening(false);
             }
-        } else {
-            SpeechRecognition.startListening({ continuous: true });
         }
     };
 
     const stopRecording = async () => {
         if (isNative) {
             try {
-                // Ensure we mark as stopped first to update UI
                 setNativeListening(false);
                 await NativeSpeech.stop();
             } catch (e) {
                 console.error("Stop Error:", e);
-                // Force state reset if error
                 setNativeListening(false);
             }
-        } else {
-            SpeechRecognition.stopListening();
         }
     };
 
@@ -136,8 +116,6 @@ export function AudioRecorder({ onTranscriptChange }) {
     const reset = () => {
         if (isNative) {
             setNativeTranscript("");
-        } else {
-            webResetTranscript();
         }
         onTranscriptChange("");
     };
