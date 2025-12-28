@@ -5,20 +5,24 @@ import { Button } from "@/components/ui/Button";
 import { Mic, Square, RefreshCw } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { SpeechRecognition as NativeSpeech } from "@capacitor-community/speech-recognition";
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
 
 export function AudioRecorder({ onTranscriptChange }) {
     // Platform check
     const isNative = Capacitor.isNativePlatform();
 
     // Native State
-    const [nativeTranscript, setNativeTranscript] = useState("");
+    const [confirmedTranscript, setConfirmedTranscript] = useState("");
+    const [partialTranscript, setPartialTranscript] = useState("");
     const [nativeListening, setNativeListening] = useState(false);
     const [permissionGranted, setPermissionGranted] = useState(false);
 
     // Unified State
-    // When not native, we can't record voice in this version as the browser lib was removed.
-    const transcript = nativeTranscript;
+    const transcript = (confirmedTranscript + " " + partialTranscript).trim();
     const listening = nativeListening;
+
+    // Use a ref to track listening state for the "Keep Alive" loop
+    const isActiveRef = useRef(false);
 
     // Initialize Native Permissions
     useEffect(() => {
@@ -47,6 +51,27 @@ export function AudioRecorder({ onTranscriptChange }) {
         return <div className="p-4 bg-yellow-50 text-yellow-700 rounded-lg text-sm">Voice recording is optimized for the Mobile App. Please use the app for full voice features.</div>;
     }
 
+    const triggerNativeStart = async () => {
+        if (!isActiveRef.current) return;
+
+        try {
+            await NativeSpeech.start({
+                language: "en-US",
+                maxResults: 2,
+                prompt: "Listening...",
+                partialResults: true,
+                popup: false,
+            });
+        } catch (e) {
+            console.error("Restart Error:", e);
+            // If it's already started, ignore. If it's a real error, reset state
+            if (!e.message?.includes("already started")) {
+                setNativeListening(false);
+                isActiveRef.current = false;
+            }
+        }
+    };
+
     const startRecording = async () => {
         // Stop AI speaking
         try {
@@ -54,7 +79,7 @@ export function AudioRecorder({ onTranscriptChange }) {
                 window.speechSynthesis.cancel();
             }
             if (Capacitor.isNativePlatform()) {
-                await TextToSpeech.stop();
+                await TextToSpeech.stop().catch(() => { });
             }
         } catch (e) {
             console.error("Error stopping TTS before recording:", e);
@@ -68,46 +93,60 @@ export function AudioRecorder({ onTranscriptChange }) {
             }
 
             try {
-                // Clear previous listeners to avoid duplicates
+                setConfirmedTranscript("");
+                setPartialTranscript("");
+                isActiveRef.current = true;
+                setNativeListening(true);
+
                 await NativeSpeech.removeAllListeners();
 
-                // Setup listener
+                // Partial results update the temporary display
                 await NativeSpeech.addListener("partialResults", (data) => {
                     if (data.matches && data.matches.length > 0) {
-                        // CRITICAL FIX: Immediately update UI with what is being spoken.
-                        setNativeTranscript(data.matches[0]);
+                        setPartialTranscript(data.matches[0]);
                     }
                 });
 
+                // Final results are appended to the permanent buffer
                 await NativeSpeech.addListener("result", (data) => {
                     if (data.matches && data.matches.length > 0) {
-                        setNativeTranscript(data.matches[0]);
+                        const finalSegment = data.matches[0];
+                        setConfirmedTranscript(prev => (prev + " " + finalSegment).trim());
+                        setPartialTranscript("");
+
+                        // Restart listening if we are still active
+                        if (isActiveRef.current) {
+                            setTimeout(() => triggerNativeStart(), 100);
+                        }
                     }
                 });
 
-                await NativeSpeech.start({
-                    language: "en-US",
-                    maxResults: 2,
-                    prompt: "Speak now...",
-                    partialResults: true,
-                    popup: false,
+                // Handle system-forced stops (timeouts)
+                await NativeSpeech.addListener("listeningState", (state) => {
+                    if (state.status === "stopped" && isActiveRef.current) {
+                        // Auto-restart if we haven't clicked manual STOP
+                        triggerNativeStart();
+                    }
                 });
-                setNativeListening(true);
+
+                await triggerNativeStart();
             } catch (e) {
-                console.error("Native Speech Error:", e);
+                console.error("Native Speech Initialization Error:", e);
                 setNativeListening(false);
+                isActiveRef.current = false;
             }
         }
     };
 
     const stopRecording = async () => {
+        isActiveRef.current = false;
+        setNativeListening(false);
         if (isNative) {
             try {
-                setNativeListening(false);
                 await NativeSpeech.stop();
+                setPartialTranscript("");
             } catch (e) {
                 console.error("Stop Error:", e);
-                setNativeListening(false);
             }
         }
     };
@@ -121,9 +160,8 @@ export function AudioRecorder({ onTranscriptChange }) {
     };
 
     const reset = () => {
-        if (isNative) {
-            setNativeTranscript("");
-        }
+        setConfirmedTranscript("");
+        setPartialTranscript("");
         onTranscriptChange("");
     };
 
