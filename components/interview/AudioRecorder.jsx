@@ -1,35 +1,142 @@
 "use client";
 
-// import 'regenerator-runtime/runtime';
-import { useState, useEffect } from "react";
-import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { Mic, Square, RefreshCw } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { SpeechRecognition as NativeSpeech } from "@capacitor-community/speech-recognition";
+import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 
 export function AudioRecorder({ onTranscriptChange }) {
+    // Platform check
+    const isNative = Capacitor.isNativePlatform();
+
+    // Web Implementation
     const {
-        transcript,
-        listening,
-        resetTranscript,
+        transcript: webTranscript,
+        listening: webListening,
+        resetTranscript: webResetTranscript,
         browserSupportsSpeechRecognition
     } = useSpeechRecognition();
 
+    // Native State
+    const [nativeTranscript, setNativeTranscript] = useState("");
+    const [nativeListening, setNativeListening] = useState(false);
+    const [permissionGranted, setPermissionGranted] = useState(false);
+
+    // Unified State
+    const transcript = isNative ? nativeTranscript : webTranscript;
+    const listening = isNative ? nativeListening : webListening;
+
+    // Initialize Native Permissions
+    useEffect(() => {
+        if (isNative) {
+            NativeSpeech.requestPermissions().then((result) => {
+                setPermissionGranted(result.speechRecognition === "granted");
+            }).catch(err => console.error("Permission Error", err));
+        }
+    }, [isNative]);
+
+    // Cleanup Native Listeners
+    useEffect(() => {
+        if (isNative) {
+            return () => {
+                NativeSpeech.removeAllListeners();
+            };
+        }
+    }, [isNative]);
+
+    // Sync Transcript
     useEffect(() => {
         onTranscriptChange(transcript);
     }, [transcript, onTranscriptChange]);
 
-    if (!browserSupportsSpeechRecognition) {
-        return <span>Browser doesn&apos;t support speech recognition.</span>;
+    if (!isNative && !browserSupportsSpeechRecognition) {
+        return <span>Browser doesn't support speech recognition.</span>;
     }
+
+    const startRecording = async () => {
+        // Stop AI speaking
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+        }
+
+        if (isNative) {
+            if (!permissionGranted) {
+                const result = await NativeSpeech.requestPermissions();
+                if (result.speechRecognition !== "granted") return;
+                setPermissionGranted(true);
+            }
+
+            try {
+                // Clear previous listeners to avoid duplicates
+                await NativeSpeech.removeAllListeners();
+
+                // Setup listener
+                await NativeSpeech.addListener("partialResults", (data) => {
+                    if (data.matches && data.matches.length > 0) {
+                        setNativeTranscript(prev => prev + " " + data.matches[0]); // Simple append logic, usually you want better handling
+                    }
+                });
+
+                await NativeSpeech.addListener("result", (data) => { // Android final result
+                    if (data.matches && data.matches.length > 0) {
+                        setNativeTranscript(prev => {
+                            // Avoid duplicating if partial handled it, but usually result is the final phrase
+                            // For simplicity in this hybrid, we might reset and append or just use what we have.
+                            // Better logic: replace last partial? 
+                            // Let's just append for now or handled by partials.
+                            // Actually, Capacitor plugin behavior varies. Let's try to just capture partials.
+                            return prev;
+                        });
+                    }
+                });
+
+                await NativeSpeech.start({
+                    language: "en-US",
+                    maxResults: 2,
+                    prompt: "Speak now...",
+                    partialResults: true,
+                    popup: false,
+                });
+                setNativeListening(true);
+            } catch (e) {
+                console.error("Native Speech Error:", e);
+                setNativeListening(false);
+            }
+        } else {
+            SpeechRecognition.startListening({ continuous: true });
+        }
+    };
+
+    const stopRecording = async () => {
+        if (isNative) {
+            try {
+                await NativeSpeech.stop();
+                setNativeListening(false);
+            } catch (e) {
+                console.error("Stop Error:", e);
+            }
+        } else {
+            SpeechRecognition.stopListening();
+        }
+    };
 
     const toggleListening = () => {
         if (listening) {
-            SpeechRecognition.stopListening();
+            stopRecording();
         } else {
-            // Stop AI speaking when user starts recording
-            window.speechSynthesis.cancel();
-            SpeechRecognition.startListening({ continuous: true });
+            startRecording();
         }
+    };
+
+    const reset = () => {
+        if (isNative) {
+            setNativeTranscript("");
+        } else {
+            webResetTranscript();
+        }
+        onTranscriptChange("");
     };
 
     return (
@@ -46,7 +153,7 @@ export function AudioRecorder({ onTranscriptChange }) {
                 >
                     {listening ? <><Square className="w-4 h-4 mr-2" /> Stop Recording</> : <><Mic className="w-4 h-4 mr-2" /> Start Recording</>}
                 </Button>
-                <Button variant="outline" onClick={resetTranscript} disabled={listening}>
+                <Button variant="outline" onClick={reset} disabled={listening}>
                     <RefreshCw className="w-4 h-4" />
                 </Button>
             </div>

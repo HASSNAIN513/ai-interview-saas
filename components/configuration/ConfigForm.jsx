@@ -100,8 +100,11 @@ export function ConfigForm() {
     const selectedVoice = watch("aiVoice");
 
     // Fetch voices
+    // Fetch voices
     useEffect(() => {
         const loadVoices = () => {
+            if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
             const availableVoices = window.speechSynthesis.getVoices();
             if (availableVoices.length > 0) {
                 // Filter for English voices only
@@ -113,7 +116,15 @@ export function ConfigForm() {
         };
 
         loadVoices();
-        window.speechSynthesis.onvoiceschanged = loadVoices;
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+
+        return () => {
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+                window.speechSynthesis.onvoiceschanged = null;
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -139,7 +150,7 @@ export function ConfigForm() {
     }, [user, reset]);
 
     const handlePreviewVoice = useCallback(() => {
-        if (!selectedVoice) return;
+        if (!selectedVoice || typeof window === 'undefined' || !window.speechSynthesis) return;
 
         setIsPreviewing(true);
         window.speechSynthesis.cancel();

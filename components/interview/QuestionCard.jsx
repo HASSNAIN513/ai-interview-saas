@@ -39,7 +39,7 @@ export function QuestionCard({ question, speakingStyle, voiceName, onPlayAudio }
     }, [voices]);
 
     const handlePlay = useCallback(() => {
-        if (!cleanQuestion) return;
+        if (!cleanQuestion || typeof window === 'undefined' || !window.speechSynthesis) return;
         window.speechSynthesis.cancel();
         setIsPlaying(true);
         const utterance = new SpeechSynthesisUtterance(cleanQuestion);
@@ -68,15 +68,21 @@ export function QuestionCard({ question, speakingStyle, voiceName, onPlayAudio }
 
     useEffect(() => {
         const loadVoices = () => {
+            if (typeof window === 'undefined' || !window.speechSynthesis) return;
+
             const availableVoices = window.speechSynthesis.getVoices();
             setVoices(availableVoices);
         };
 
         loadVoices();
-        window.speechSynthesis.onvoiceschanged = loadVoices;
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
 
         return () => {
-            window.speechSynthesis.onvoiceschanged = null;
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+                window.speechSynthesis.onvoiceschanged = null;
+            }
         };
     }, []);
 
@@ -87,7 +93,9 @@ export function QuestionCard({ question, speakingStyle, voiceName, onPlayAudio }
             }, 500);
             return () => {
                 clearTimeout(timer);
-                window.speechSynthesis.cancel();
+                if (typeof window !== 'undefined' && window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                }
                 setIsPlaying(false);
             };
         }
