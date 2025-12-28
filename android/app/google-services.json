@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "503835269338",
+    "project_id": "ai-interviewer-c40b7",
+    "storage_bucket": "ai-interviewer-c40b7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:503835269338:android:36d2d199408377a2982de3",
+        "android_client_info": {
+          "package_name": "com.aiinterviewprep.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "503835269338-489u434b1t1hnn9t1v5ets9tl6dr34vc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aiinterviewprep.app",
+            "certificate_hash": "e3fd0f75430556426dc2b03a2fcbb9c8e9d3c6a5"
+          }
+        },
+        {
+          "client_id": "503835269338-udepcptillvo2osfrgivf39chups4203.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBS2LJtWx1STp7jmjonxOV2LNpsSSjgvVc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "503835269338-udepcptillvo2osfrgivf39chups4203.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

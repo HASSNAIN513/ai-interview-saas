@@ -69,12 +69,29 @@ export default function LoginPage() {
 
     const handleGoogleLogin = async () => {
         try {
+            console.log("Starting Google Login...");
             if (Capacitor.isNativePlatform()) {
-                // Native Login
+                console.log("Native Platform detected. Calling GoogleAuth.signIn()...");
+                // Check if GoogleAuth is available
+                if (!GoogleAuth) {
+                    throw new Error("GoogleAuth plugin not available");
+                }
                 const user = await GoogleAuth.signIn();
+                console.log("GoogleAuth.signIn() success:", user);
+
+                if (!user || !user.authentication) {
+                    throw new Error("Login failed: No authentication data received");
+                }
+
                 const idToken = user.authentication.idToken;
+                if (!idToken) {
+                    throw new Error("Login failed: No ID Token received");
+                }
+
+                console.log("Got ID Token, signing in with credential...");
                 const credential = GoogleAuthProvider.credential(idToken);
                 await signInWithCredential(auth, credential);
+                console.log("Firebase sign-in success");
                 router.push("/dashboard");
             } else {
                 // Web Login
@@ -85,7 +102,11 @@ export default function LoginPage() {
             }
         } catch (err) {
             console.error("Google Login Error:", err);
-            setError(err.message);
+            // On native, alert can be helpful for debugging
+            if (Capacitor.isNativePlatform()) {
+                alert("Login Error: " + (err.message || JSON.stringify(err)));
+            }
+            setError(err.message || "Failed to log in with Google");
         }
     };
 
