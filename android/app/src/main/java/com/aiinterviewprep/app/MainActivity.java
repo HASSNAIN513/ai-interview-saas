@@ -1,13 +1,5 @@
 package com.aiinterviewprep.app;
 
 import com.getcapacitor.BridgeActivity;
-import android.os.Bundle;
-import com.codetrixstudio.capacitor.googleauth.GoogleAuth;
 
-public class MainActivity extends BridgeActivity {
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        registerPlugin(GoogleAuth.class);
-    }
-}
+public class MainActivity extends BridgeActivity {}

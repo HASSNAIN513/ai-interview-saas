@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithCredential } from "firebase/auth";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
-import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -69,44 +68,22 @@ export default function LoginPage() {
 
     const handleGoogleLogin = async () => {
         try {
-            console.log("Starting Google Login...");
+            const provider = new GoogleAuthProvider();
+            // Force account selection every time
+            provider.setCustomParameters({ prompt: 'select_account' });
+
+            // Hybrid Auth Strategy:
+            // 1. Native App (Android/iOS): Use Redirect (Best for WebViews)
+            // 2. Browser (Mobile/Desktop): Use Popup (Best for avoiding storage partitioning errors)
             if (Capacitor.isNativePlatform()) {
-                console.log("Native Platform detected. Calling GoogleAuth.signIn()...");
-                // Check if GoogleAuth is available
-                if (!GoogleAuth) {
-                    throw new Error("GoogleAuth plugin not available");
-                }
-                const user = await GoogleAuth.signIn();
-                console.log("GoogleAuth.signIn() success:", user);
-
-                if (!user || !user.authentication) {
-                    throw new Error("Login failed: No authentication data received");
-                }
-
-                const idToken = user.authentication.idToken;
-                if (!idToken) {
-                    throw new Error("Login failed: No ID Token received");
-                }
-
-                console.log("Got ID Token, signing in with credential...");
-                const credential = GoogleAuthProvider.credential(idToken);
-                await signInWithCredential(auth, credential);
-                console.log("Firebase sign-in success");
-                router.push("/dashboard");
+                await signInWithRedirect(auth, provider);
             } else {
-                // Web Login
-                const provider = new GoogleAuthProvider();
-                provider.setCustomParameters({ prompt: 'select_account' });
                 await signInWithPopup(auth, provider);
                 router.push("/dashboard");
             }
         } catch (err) {
             console.error("Google Login Error:", err);
-            // On native, alert can be helpful for debugging
-            if (Capacitor.isNativePlatform()) {
-                alert("Login Error: " + (err.message || JSON.stringify(err)));
-            }
-            setError(err.message || "Failed to log in with Google");
+            setError(err.message);
         }
     };
 

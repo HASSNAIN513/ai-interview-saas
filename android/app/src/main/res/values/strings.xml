@@ -4,5 +4,4 @@
     <string name="title_activity_main">AI Interview Prep</string>
     <string name="package_name">com.aiinterviewprep.app</string>
     <string name="custom_url_scheme">com.aiinterviewprep.app</string>
-    <string name="server_client_id">503835269338-udepcptillvo2osfrgivf39chups4203.apps.googleusercontent.com</string>
 </resources>
