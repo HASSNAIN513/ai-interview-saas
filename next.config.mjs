@@ -12,6 +12,7 @@ const withPWA = withPWAInit({
   ],
 });
 
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -22,6 +23,10 @@ const nextConfig = {
       },
     ],
   },
+  experimental: {
+    turbo: false, // disable Turbopack
+  },
 };
 
 export default withPWA(nextConfig);
+
