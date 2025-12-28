@@ -124,6 +124,9 @@ export function QuestionCard({ question, speakingStyle, voiceName, onPlayAudio }
                 if (typeof window !== 'undefined' && window.speechSynthesis) {
                     window.speechSynthesis.cancel();
                 }
+                if (Capacitor.isNativePlatform()) {
+                    TextToSpeech.stop().catch(() => { });
+                }
                 setIsPlaying(false);
             };
         }

@@ -56,10 +56,15 @@ export default function LoginPage() {
         e.preventDefault();
         setLoading(true);
         setError("");
+        console.log("Starting Login for:", email);
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            console.log("Login Success, navigating to dashboard...");
+            // Use window.location.href or router.push? 
+            // router.push is better for client side navigation (stays in app)
             router.push("/dashboard");
         } catch (err) {
+            console.error("Login Error:", err);
             setError(err.message);
         } finally {
             setLoading(false);

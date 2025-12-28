@@ -11,7 +11,9 @@ const config: CapacitorConfig = {
       '*.google.com',
       '*.googleapis.com',
       '*.firebaseapp.com',
-      '*.vercel.app'
+      '*.vercel.app',
+      'ai-interview-saas-eight.vercel.app',
+      '*.googleusercontent.com'
     ],
     errorPath: 'offline.html'
   },

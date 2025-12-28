@@ -49,8 +49,15 @@ export function AudioRecorder({ onTranscriptChange }) {
 
     const startRecording = async () => {
         // Stop AI speaking
-        if (typeof window !== 'undefined' && window.speechSynthesis) {
-            window.speechSynthesis.cancel();
+        try {
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+            if (Capacitor.isNativePlatform()) {
+                await TextToSpeech.stop();
+            }
+        } catch (e) {
+            console.error("Error stopping TTS before recording:", e);
         }
 
         if (isNative) {
