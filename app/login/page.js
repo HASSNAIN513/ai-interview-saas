@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect } from "firebase/auth";
+import { Capacitor } from "@capacitor/core";
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -50,9 +51,17 @@ export default function LoginPage() {
     const handleGoogleLogin = async () => {
         try {
             const provider = new GoogleAuthProvider();
-            await signInWithPopup(auth, provider);
-            router.push("/dashboard");
+            // Hybrid Auth Strategy:
+            // 1. Native App (Android/iOS): Use Redirect (Best for WebViews)
+            // 2. Browser (Mobile/Desktop): Use Popup (Best for avoiding storage partitioning errors)
+            if (Capacitor.isNativePlatform()) {
+                await signInWithRedirect(auth, provider);
+            } else {
+                await signInWithPopup(auth, provider);
+                router.push("/dashboard");
+            }
         } catch (err) {
+            console.error("Google Login Error:", err);
             setError(err.message);
         }
     };
