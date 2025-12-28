@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/Button";
 import { Volume2 } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
+import { TextToSpeech } from '@capacitor-community/text-to-speech';
+import { Capacitor } from '@capacitor/core';
 
 export function QuestionCard({ question, speakingStyle, voiceName, onPlayAudio }) {
     const [isPlaying, setIsPlaying] = useState(false);
@@ -38,32 +40,54 @@ export function QuestionCard({ question, speakingStyle, voiceName, onPlayAudio }
         return voices.find(v => v.lang.startsWith('en')) || voices[0];
     }, [voices]);
 
-    const handlePlay = useCallback(() => {
-        if (!cleanQuestion || typeof window === 'undefined' || !window.speechSynthesis) return;
-        window.speechSynthesis.cancel();
+
+
+    const handlePlay = useCallback(async () => {
+        if (!cleanQuestion) return;
         setIsPlaying(true);
-        const utterance = new SpeechSynthesisUtterance(cleanQuestion);
 
-        const selectedVoice = getPreferredVoice(speakingStyle, voiceName);
-        if (selectedVoice) {
-            utterance.voice = selectedVoice;
+        try {
+            if (Capacitor.isNativePlatform()) {
+                // Native TTS Logic
+                await TextToSpeech.stop();
+                await TextToSpeech.speak({
+                    text: cleanQuestion,
+                    lang: 'en-US',
+                    rate: speakingStyle === "Energetic" ? 1.1 : (speakingStyle === "Authoritative" ? 0.95 : 1.0),
+                    pitch: speakingStyle === "Energetic" ? 1.1 : (speakingStyle === "Authoritative" ? 0.9 : 1.0),
+                    volume: 1.0,
+                    category: 'ambient',
+                });
+                setIsPlaying(false); // Native wait implies it finishes? Plugin promise resolves when speaking starts or finishes? Check docs.
+                // Actually the standard plugin resolves when it finishes speaking usually
+            } else {
+                // Web Fallback
+                if (typeof window === 'undefined' || !window.speechSynthesis) return;
+                window.speechSynthesis.cancel();
+
+                const utterance = new SpeechSynthesisUtterance(cleanQuestion);
+                const selectedVoice = getPreferredVoice(speakingStyle, voiceName);
+                if (selectedVoice) utterance.voice = selectedVoice;
+
+                if (speakingStyle === "Energetic") {
+                    utterance.rate = 1.1;
+                    utterance.pitch = 1.1;
+                } else if (speakingStyle === "Authoritative") {
+                    utterance.rate = 0.95;
+                    utterance.pitch = 0.9;
+                } else {
+                    utterance.rate = 1;
+                    utterance.pitch = 1;
+                }
+
+                utterance.onend = () => setIsPlaying(false);
+                utterance.onerror = () => setIsPlaying(false);
+                window.speechSynthesis.speak(utterance);
+            }
+        } catch (err) {
+            console.error("TTS Error:", err);
+            setIsPlaying(false);
         }
-
-        if (speakingStyle === "Energetic") {
-            utterance.rate = 1.1;
-            utterance.pitch = 1.1;
-        } else if (speakingStyle === "Authoritative") {
-            utterance.rate = 0.95;
-            utterance.pitch = 0.9;
-        } else {
-            utterance.rate = 1;
-            utterance.pitch = 1;
-        }
-
-        utterance.onend = () => setIsPlaying(false);
-        utterance.onerror = () => setIsPlaying(false);
-
-        window.speechSynthesis.speak(utterance);
     }, [cleanQuestion, speakingStyle, voiceName, getPreferredVoice]);
 
     useEffect(() => {

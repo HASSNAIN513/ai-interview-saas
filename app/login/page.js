@@ -51,6 +51,9 @@ export default function LoginPage() {
     const handleGoogleLogin = async () => {
         try {
             const provider = new GoogleAuthProvider();
+            // Force account selection every time
+            provider.setCustomParameters({ prompt: 'select_account' });
+
             // Hybrid Auth Strategy:
             // 1. Native App (Android/iOS): Use Redirect (Best for WebViews)
             // 2. Browser (Mobile/Desktop): Use Popup (Best for avoiding storage partitioning errors)
