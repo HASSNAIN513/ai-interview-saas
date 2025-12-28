@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from "firebase/auth";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signInWithCredential } from "firebase/auth";
 import { Capacitor } from "@capacitor/core";
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth';
 import { auth } from "@/lib/firebase";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -68,16 +69,17 @@ export default function LoginPage() {
 
     const handleGoogleLogin = async () => {
         try {
-            const provider = new GoogleAuthProvider();
-            // Force account selection every time
-            provider.setCustomParameters({ prompt: 'select_account' });
-
-            // Hybrid Auth Strategy:
-            // 1. Native App (Android/iOS): Use Redirect (Best for WebViews)
-            // 2. Browser (Mobile/Desktop): Use Popup (Best for avoiding storage partitioning errors)
             if (Capacitor.isNativePlatform()) {
-                await signInWithRedirect(auth, provider);
+                // Native Login
+                const user = await GoogleAuth.signIn();
+                const idToken = user.authentication.idToken;
+                const credential = GoogleAuthProvider.credential(idToken);
+                await signInWithCredential(auth, credential);
+                router.push("/dashboard");
             } else {
+                // Web Login
+                const provider = new GoogleAuthProvider();
+                provider.setCustomParameters({ prompt: 'select_account' });
                 await signInWithPopup(auth, provider);
                 router.push("/dashboard");
             }
